@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APR / EAIR Loan Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F5F2EC;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE6;
+    --border: #DDD9D0;
+    --text: #1A1714;
+    --muted: #7A756D;
+    --accent: #1D3A5F;
+    --accent2: #C4522A;
+    --green: #2A6B45;
+    --green-bg: #EAF3E8;
+    --red: #A32D2D;
+    --red-bg: #FCEBEB;
+    --amber: #7A4F0D;
+    --amber-bg: #FEF3DC;
+    --float-accent: #5A3285;
+    --float-bg: #F3EEFB;
+    --float-border: #C4A8E8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); min-height: 100vh; }
+
+  header {
+    background: var(--accent);
+    color: #fff;
+    padding: 22px 48px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header .left { display: flex; align-items: flex-end; gap: 16px; }
+  header .logo { font-family: 'DM Serif Display', serif; font-size: 24px; letter-spacing: -0.5px; line-height: 1; }
+  header .tagline { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 2px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .rate-type-tabs { display: flex; gap: 4px; background: rgba(255,255,255,0.1); border-radius: 8px; padding: 4px; }
+  .rate-type-tabs button {
+    padding: 7px 20px; font-size: 13px; font-weight: 500; border: none; border-radius: 6px;
+    cursor: pointer; background: transparent; color: rgba(255,255,255,0.6);
+    font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+  }
+  .rate-type-tabs button.active { background: #fff; color: var(--accent); }
+
+  .main { display: grid; grid-template-columns: 420px 1fr; min-height: calc(100vh - 72px); }
+
+  /* LEFT PANEL */
+  .inputs-panel { background: var(--surface); border-right: 1px solid var(--border); padding: 24px 28px; overflow-y: auto; }
+  .panel-section { margin-bottom: 24px; }
+  .panel-section-title {
+    font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+  }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 4px; }
+  .field input, .field select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px 11px; font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500;
+    color: var(--text); outline: none; transition: border-color 0.15s;
+  }
+  .field select { font-family: 'DM Sans', sans-serif; }
+  .field input:focus { border-color: var(--accent); background: #fff; }
+  .prefix-wrap { position: relative; }
+  .prefix-wrap .prefix { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; pointer-events: none; }
+  .prefix-wrap input { padding-left: 22px; }
+  .suffix-wrap { position: relative; }
+  .suffix-wrap .suffix { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--muted); pointer-events: none; }
+  .suffix-wrap input { padding-right: 34px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .field-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+  /* MODE TOGGLE */
+  .mode-toggle { display: flex; gap: 5px; margin-bottom: 12px; }
+  .mode-toggle button {
+    flex: 1; padding: 7px 6px; font-size: 11px; font-family: 'DM Sans', sans-serif;
+    border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+    background: var(--surface2); color: var(--muted); font-weight: 500; transition: all 0.15s;
+  }
+  .mode-toggle button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .mode-toggle.float button.active { background: var(--float-accent); border-color: var(--float-accent); }
+
+  /* FLOATING RATE PERIODS */
+  .float-info {
+    background: var(--float-bg); border: 1px solid var(--float-border); border-radius: 8px;
+    padding: 12px 14px; margin-bottom: 14px; font-size: 12px; color: var(--float-accent); line-height: 1.6;
+  }
+  .periods-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 8px; }
+  .periods-table th {
+    background: var(--surface2); padding: 6px 8px; text-align: left; font-size: 10px;
+    font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .periods-table td { padding: 5px 4px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .periods-table tr:last-child td { border-bottom: none; }
+  .periods-table input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px;
+    padding: 5px 7px; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text); outline: none;
+  }
+  .periods-table input:focus { border-color: var(--float-accent); background: #fff; }
+  .del-btn {
+    background: none; border: none; color: var(--red); cursor: pointer; font-size: 14px;
+    padding: 2px 6px; border-radius: 4px; line-height: 1;
+  }
+  .del-btn:hover { background: var(--red-bg); }
+  .add-period-btn {
+    width: 100%; padding: 7px; font-size: 12px; font-family: 'DM Sans', sans-serif;
+    border: 1px dashed var(--float-border); border-radius: 6px; cursor: pointer;
+    background: var(--float-bg); color: var(--float-accent); font-weight: 500;
+    transition: all 0.15s; margin-bottom: 10px;
+  }
+  .add-period-btn:hover { background: #EBE1F8; }
+
+  /* CALC BUTTON */
+  .calc-btn {
+    width: 100%; border: none; border-radius: 8px; padding: 13px;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+    cursor: pointer; letter-spacing: 0.02em; transition: background 0.15s, transform 0.1s; color: #fff;
+  }
+  .calc-btn.fixed { background: var(--accent); }
+  .calc-btn.fixed:hover { background: #162d4a; }
+  .calc-btn.floating { background: var(--float-accent); }
+  .calc-btn.floating:hover { background: #3f2260; }
+  .calc-btn:active { transform: scale(0.99); }
+
+  /* RIGHT PANEL */
+  .results-panel { padding: 28px 36px; background: var(--bg); overflow-y: auto; }
+  .results-placeholder {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; color: var(--muted); text-align: center; gap: 10px;
+  }
+  .results-placeholder .icon { font-size: 36px; opacity: 0.25; }
+  .results-placeholder p { font-size: 13px; }
+  #results-content { display: none; }
+
+  /* HERO CARDS */
+  .result-hero { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+  .hero-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+  .hero-card .hc-label { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 5px; }
+  .hero-card .hc-val { font-family: 'DM Serif Display', serif; font-size: 24px; color: var(--text); line-height: 1.1; }
+  .hero-card .hc-sub { font-size: 10px; color: var(--muted); margin-top: 3px; }
+  .hero-card.accent-fixed { background: var(--accent); border-color: var(--accent); }
+  .hero-card.accent-float { background: var(--float-accent); border-color: var(--float-accent); }
+  .hero-card.accent-fixed .hc-label, .hero-card.accent-float .hc-label { color: rgba(255,255,255,0.55); }
+  .hero-card.accent-fixed .hc-val, .hero-card.accent-float .hc-val { color: #fff; }
+  .hero-card.accent-fixed .hc-sub, .hero-card.accent-float .hc-sub { color: rgba(255,255,255,0.45); }
+
+  /* FLOATING RATE TIMELINE */
+  .rate-timeline { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 18px; }
+  .rate-timeline h3 { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 14px; }
+  .timeline-track { display: flex; height: 36px; border-radius: 6px; overflow: hidden; gap: 2px; margin-bottom: 8px; }
+  .timeline-seg { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; color: #fff; border-radius: 4px; transition: flex 0.4s; min-width: 40px; }
+  .timeline-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+  /* RATE COMPARISON */
+  .rate-compare { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 18px; }
+  .rate-compare h3 { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 14px; }
+  .rate-bar-row { margin-bottom: 12px; }
+  .rate-bar-row .rb-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+  .rate-bar-row .rb-label { font-size: 12px; color: var(--text); }
+  .rate-bar-row .rb-val { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; }
+  .rate-bar-track { height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .rate-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s cubic-bezier(0.4,0,0.2,1); }
+
+  /* VERDICT */
+  .verdict { border-radius: 8px; padding: 13px 16px; font-size: 12px; line-height: 1.7; margin-bottom: 18px; border: 1px solid; }
+  .verdict.warn { background: var(--amber-bg); border-color: #E6C87A; color: var(--amber); }
+  .verdict.ok { background: var(--green-bg); border-color: #9FD48A; color: var(--green); }
+  .verdict.info { background: var(--float-bg); border-color: var(--float-border); color: var(--float-accent); }
+  .verdict strong { font-weight: 500; }
+
+  /* SCENARIOS */
+  .scenarios { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 18px; }
+  .scenarios h3 { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); padding: 14px 18px 10px; border-bottom: 1px solid var(--border); }
+  .sc-header { display: grid; grid-template-columns: 1fr 90px 90px; gap: 8px; padding: 7px 18px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+  .sc-header span { font-size: 10px; color: var(--muted); text-align: right; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+  .sc-header span:first-child { text-align: left; }
+  .scenario-row { display: grid; grid-template-columns: 1fr 90px 90px; gap: 8px; align-items: center; padding: 9px 18px; border-bottom: 1px solid var(--border); }
+  .scenario-row:last-child { border-bottom: none; }
+  .scenario-row:hover { background: var(--surface2); }
+  .scenario-row.highlighted { background: var(--green-bg); }
+  .sc-label { font-size: 12px; color: var(--text); }
+  .sc-irr, .sc-apr { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; text-align: right; }
+  .sc-apr.high { color: var(--red); }
+  .sc-apr.match { color: var(--green); }
+  .badge { display: inline-block; font-size: 10px; border-radius: 3px; padding: 1px 6px; margin-left: 5px; font-weight: 500; }
+  .badge-green { background: #C0DD97; color: #173404; }
+  .badge-blue { background: #B5D4F4; color: #042C53; }
+  .badge-purple { background: #CECBF6; color: #26215C; }
+
+  /* AMORTISATION */
+  .amort { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 18px; }
+  .amort-header { display: flex; justify-content: space-between; align-items: center; padding: 13px 18px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; }
+  .amort-header h3 { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .amort-toggle-icon { font-size: 14px; color: var(--muted); transition: transform 0.2s; }
+  .amort-table-wrap { display: none; overflow-x: auto; }
+  .amort-table-wrap.open { display: block; }
+  table.amort-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.amort-table th { background: var(--surface2); padding: 7px 12px; text-align: right; font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  table.amort-table th:first-child { text-align: center; width: 40px; }
+  table.amort-table th:nth-child(2) { text-align: left; }
+  table.amort-table td { padding: 6px 12px; text-align: right; border-bottom: 1px solid var(--border); font-family: 'DM Mono', monospace; color: var(--text); white-space: nowrap; }
+  table.amort-table td:first-child { text-align: center; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 11px; }
+  table.amort-table td:nth-child(2) { text-align: left; font-family: 'DM Sans', sans-serif; font-size: 11px; color: var(--muted); }
+  table.amort-table tr:last-child td { border-bottom: none; }
+  table.amort-table tr.period-change td { border-top: 2px solid var(--float-border); }
+  table.amort-table tr.last-row td { background: var(--surface2); font-weight: 500; }
+  .rate-tag { display: inline-block; font-size: 9px; background: var(--float-bg); color: var(--float-accent); border-radius: 3px; padding: 1px 5px; font-weight: 500; font-family: 'DM Sans', sans-serif; }
+
+  @media print {
+    .inputs-panel { display: none; }
+    .main { grid-template-columns: 1fr; }
+    .results-panel { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="left">
+    <div>
+      <div class="logo">APR / EAIR Calculator</div>
+    </div>
+  </div>
+  <div class="rate-type-tabs">
+    <button class="active" id="tab-fixed" onclick="switchMode('fixed')">Fixed Rate</button>
+    <button id="tab-floating" onclick="switchMode('floating')">Floating Rate</button>
+  </div>
+</header>
+
+<div class="main">
+  <!-- LEFT INPUTS -->
+  <div class="inputs-panel">
+
+    <!-- LOAN DETAILS -->
+    <div class="panel-section">
+      <div class="panel-section-title">Loan details</div>
+      <div class="field">
+        <label>Loan amount (sanctioned)</label>
+        <div class="prefix-wrap"><span class="prefix">₹</span><input type="number" id="loanAmt" value="150000" step="1000"></div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Tenure (months)</label>
+          <input type="number" id="tenure" value="24" min="1" max="360" onchange="onTenureChange()">
+        </div>
+        <div class="field">
+          <label>Net disbursed amount</label>
+          <div class="prefix-wrap"><span class="prefix">₹</span><input type="number" id="netDisbursed" value="146430" step="100"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FEES -->
+    <div class="panel-section">
+      <div class="panel-section-title">Fees &amp; charges</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Total fees</label>
+          <div class="prefix-wrap"><span class="prefix">₹</span><input type="number" id="totalFees" value="2855" step="1"></div>
+        </div>
+        <div class="field">
+          <label>Third party</label>
+          <div class="prefix-wrap"><span class="prefix">₹</span><input type="number" id="thirdParty" value="200" step="1"></div>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Payable to lender</label>
+          <div class="prefix-wrap"><span class="prefix">₹</span><input type="number" id="payableSFL" value="2250" step="1"></div>
+        </div>
+        <div class="field">
+          <label>Applicable taxes</label>
+          <div class="prefix-wrap"><span class="prefix">₹</span><input type="number" id="taxes" value="405" step="1"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FIXED RATE SECTION -->
+    <div id="section-fixed">
+      <div class="panel-section">
+        <div class="panel-section-title">Fixed interest rate</div>
+        <div class="field-row">
+          <div class="field">
+            <label>Nominal rate (% p.a.)</label>
+            <div class="suffix-wrap"><span class="suffix">%</span><input type="number" id="nomRate" value="33.05" step="0.01"></div>
+          </div>
+          <div class="field">
+            <label>Interest type</label>
+            <select id="interestType" onchange="onInterestTypeChange()">
+              <option value="reducing">Reducing balance</option>
+              <option value="flat">Flat rate</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-section-title">EMI structure</div>
+        <div class="mode-toggle" id="emi-toggle-btns">
+          <button class="active" id="btn-uniform" onclick="setEMIMode('uniform')">Uniform EMI</button>
+          <button id="btn-split" onclick="setEMIMode('split')">Last month differs</button>
+          <button id="btn-manual" onclick="setEMIMode('manual')">Auto-calculate</button>
+        </div>
+        <div id="emi-uniform">
+          <div class="field">
+            <label>Monthly EMI</label>
+            <div class="prefix-wrap"><span class="prefix">₹</span><input type="number" id="emiUniform" value="8622" step="1"></div>
+          </div>
+        </div>
+        <div id="emi-split" style="display:none;">
+          <div class="field-row">
+            <div class="field">
+              <label>EMI (months 1 to n-1)</label>
+              <div class="prefix-wrap"><span class="prefix">₹</span><input type="number" id="emiRegular" value="8622" step="1"></div>
+            </div>
+            <div class="field">
+              <label>Last month EMI</label>
+              <div class="prefix-wrap"><span class="prefix">₹</span><input type="number" id="emiLast" value="8591" step="1"></div>
+            </div>
+          </div>
+        </div>
+        <div id="emi-manual" style="display:none;">
+          <div class="field" style="background:var(--surface2);border-radius:6px;padding:10px 12px;border:1px solid var(--border);">
+            <span style="font-size:12px;color:var(--muted);">EMI will be auto-calculated from the nominal rate and loan amount using reducing balance formula.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FLOATING RATE SECTION -->
+    <div id="section-floating" style="display:none;">
+      <div class="panel-section">
+        <div class="panel-section-title">Floating rate periods</div>
+        <div class="float-info">
+          Define how the interest rate changes over the loan tenure. Each period has a rate that applies for a set number of months. EMIs are auto-recalculated at each rate reset.
+        </div>
+        <table class="periods-table">
+          <thead>
+            <tr>
+              <th>Period</th>
+              <th>Months</th>
+              <th>Rate % p.a.</th>
+              <th>EMI type</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="periods-tbody"></tbody>
+        </table>
+        <button class="add-period-btn" onclick="addPeriod()">+ Add rate period</button>
+        <div class="field" style="margin-top:4px;">
+          <label>Remaining months use last period's rate</label>
+        </div>
+        <div id="float-tenure-note" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+      </div>
+    </div>
+
+    <!-- CLIENT APR & CALCULATE -->
+    <div class="panel-section">
+      <div class="panel-section-title">Comparison</div>
+      <div class="field">
+        <label>Client's stated APR (for comparison)</label>
+        <div class="suffix-wrap"><span class="suffix">%</span><input type="number" id="clientAPR" value="35" step="0.01"></div>
+      </div>
+    </div>
+
+    <button class="calc-btn fixed" id="calc-btn" onclick="calculate()">Calculate APR &amp; EAIR ↗</button>
+  </div>
+
+  <!-- RIGHT RESULTS -->
+  <div class="results-panel">
+    <div class="results-placeholder" id="results-placeholder">
+      <div class="icon">◎</div>
+      <p>Choose <strong>Fixed</strong> or <strong>Floating</strong> rate,<br>fill in the details and calculate.</p>
+    </div>
+
+    <div id="results-content">
+      <div class="result-hero" id="hero-cards"></div>
+      <div id="rate-timeline-box"></div>
+      <div class="rate-compare"><h3>Rate comparison</h3><div id="rate-bars"></div></div>
+      <div id="verdict-box"></div>
+      <div class="scenarios">
+        <h3>Scenario analysis — APR by calculation basis</h3>
+        <div class="sc-header"><span>Method</span><span>Monthly IRR</span><span>APR / EAIR</span></div>
+        <div id="scenario-rows"></div>
+      </div>
+      <div class="amort">
+        <div class="amort-header" onclick="toggleAmort()">
+          <h3>Amortisation schedule</h3>
+          <span class="amort-toggle-icon" id="amort-icon">▼</span>
+        </div>
+        <div class="amort-table-wrap" id="amort-table-wrap">
+          <table class="amort-table">
+            <thead>
+              <tr><th>#</th><th>Rate</th><th>Opening bal.</th><th>EMI</th><th>Interest</th><th>Principal</th><th>Closing bal.</th></tr>
+            </thead>
+            <tbody id="amort-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────
+let mode = 'fixed';
+let emiMode = 'split';
+let periods = [
+  { months: 12, rate: 33.05, emiType: 'reducing' },
+  { months: 12, rate: 36.00, emiType: 'reducing' }
+];
+const COLORS = ['#1D3A5F','#5A3285','#C4522A','#2A6B45','#7A4F0D','#A32D2D','#0F6E56','#3C3489'];
+
+// ─── MODE SWITCH ──────────────────────────────────────────────────
+function switchMode(m) {
+  mode = m;
+  document.getElementById('tab-fixed').classList.toggle('active', m === 'fixed');
+  document.getElementById('tab-floating').classList.toggle('active', m === 'floating');
+  document.getElementById('section-fixed').style.display = m === 'fixed' ? 'block' : 'none';
+  document.getElementById('section-floating').style.display = m === 'floating' ? 'block' : 'none';
+  const btn = document.getElementById('calc-btn');
+  btn.className = 'calc-btn ' + (m === 'fixed' ? 'fixed' : 'floating');
+  btn.textContent = m === 'fixed' ? 'Calculate APR & EAIR ↗' : 'Calculate Floating APR ↗';
+}
+
+function onInterestTypeChange() {
+  // No special UI changes needed
+}
+
+function onTenureChange() {
+  updateFloatTenureNote();
+}
+
+// ─── EMI MODE ────────────────────────────────────────────────────
+function setEMIMode(m) {
+  emiMode = m;
+  document.getElementById('emi-uniform').style.display = m === 'uniform' ? 'block' : 'none';
+  document.getElementById('emi-split').style.display = m === 'split' ? 'block' : 'none';
+  document.getElementById('emi-manual').style.display = m === 'manual' ? 'block' : 'none';
+  ['btn-uniform','btn-split','btn-manual'].forEach(id => {
+    document.getElementById(id).classList.remove('active');
+  });
+  document.getElementById('btn-' + m).classList.add('active');
+}
+
+// ─── FLOATING PERIODS ─────────────────────────────────────────────
+function renderPeriods() {
+  const tbody = document.getElementById('periods-tbody');
+  tbody.innerHTML = '';
+  periods.forEach((p, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-size:11px;color:var(--muted);padding:4px 6px;">${i+1}</td>
+      <td><input type="number" min="1" value="${p.months}" onchange="updatePeriod(${i},'months',this.value)" style="width:60px;"></td>
+      <td>
+        <div style="position:relative;">
+          <input type="number" step="0.01" value="${p.rate}" onchange="updatePeriod(${i},'rate',this.value)" style="width:80px;padding-right:18px;">
+          <span style="position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--muted);pointer-events:none;">%</span>
+        </div>
+      </td>
+      <td>
+        <select onchange="updatePeriod(${i},'emiType',this.value)" style="width:90px;font-size:11px;padding:4px 6px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);font-family:'DM Sans',sans-serif;color:var(--text);">
+          <option value="reducing" ${p.emiType==='reducing'?'selected':''}>Reducing</option>
+          <option value="flat" ${p.emiType==='flat'?'selected':''}>Flat</option>
+        </select>
+      </td>
+      <td>${periods.length > 1 ? `<button class="del-btn" onclick="removePeriod(${i})">×</button>` : ''}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  updateFloatTenureNote();
+}
+
+function updatePeriod(i, key, val) {
+  periods[i][key] = key === 'months' || key === 'rate' ? parseFloat(val) || 0 : val;
+  updateFloatTenureNote();
+}
+
+function addPeriod() {
+  const lastRate = periods.length ? periods[periods.length-1].rate : 33.05;
+  periods.push({ months: 12, rate: lastRate, emiType: 'reducing' });
+  renderPeriods();
+}
+
+function removePeriod(i) {
+  periods.splice(i, 1);
+  renderPeriods();
+}
+
+function updateFloatTenureNote() {
+  const tenure = Math.round(getVal('tenure'));
+  const defined = periods.reduce((s, p) => s + (p.months || 0), 0);
+  const note = document.getElementById('float-tenure-note');
+  if (!note) return;
+  if (defined === tenure) {
+    note.textContent = `✓ Periods sum to ${tenure} months (matches tenure).`;
+    note.style.color = 'var(--green)';
+  } else if (defined < tenure) {
+    note.textContent = `${tenure - defined} months unassigned — last period's rate will apply.`;
+    note.style.color = 'var(--amber)';
+  } else {
+    note.textContent = `Periods sum to ${defined} months, exceeds tenure of ${tenure}. Extra months will be ignored.`;
+    note.style.color = 'var(--red)';
+  }
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────
+function getVal(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function fmt(n) { return '₹' + Math.round(n).toLocaleString('en-IN'); }
+function fmtPct(n) { return n.toFixed(4) + '%'; }
+function fmtPct2(n) { return n.toFixed(2) + '%'; }
+
+function npv(r, flows) { return flows.reduce((s,f,i) => s + f/Math.pow(1+r,i), 0); }
+function npvPrime(r, flows) { return flows.reduce((s,f,i) => s - i*f/Math.pow(1+r,i+1), 0); }
+function solveIRR(flows, guess) {
+  let r = guess || 0.025;
+  for (let i = 0; i < 500; i++) {
+    const v = npv(r, flows), vp = npvPrime(r, flows);
+    if (Math.abs(vp) < 1e-15) break;
+    const nr = r - v / vp;
+    if (Math.abs(nr - r) < 1e-12) return nr;
+    r = nr;
+  }
+  return r;
+}
+
+// Calculate EMI for reducing balance
+function calcEMI(principal, annualRate, months) {
+  const r = annualRate / 12 / 100;
+  if (r === 0) return principal / months;
+  return principal * r * Math.pow(1+r, months) / (Math.pow(1+r, months) - 1);
+}
+
+// Calculate EMI for flat rate
+function calcEMIFlat(principal, annualRate, months) {
+  return (principal + principal * annualRate / 100 * months / 12) / months;
+}
+
+function toggleAmort() {
+  const wrap = document.getElementById('amort-table-wrap');
+  const icon = document.getElementById('amort-icon');
+  const open = wrap.classList.toggle('open');
+  icon.textContent = open ? '▲' : '▼';
+}
+
+// ─── FIXED RATE CALCULATION ───────────────────────────────────────
+function calcFixed() {
+  const loanAmt = getVal('loanAmt');
+  const tenure = Math.round(getVal('tenure'));
+  const nomRate = getVal('nomRate');
+  const netDisbursed = getVal('netDisbursed');
+  const clientAPR = getVal('clientAPR');
+  const interestType = document.getElementById('interestType').value;
+
+  let emis = [];
+  if (emiMode === 'uniform') {
+    const e = getVal('emiUniform');
+    emis = Array(tenure).fill(e);
+  } else if (emiMode === 'split') {
+    const eReg = getVal('emiRegular'), eLast = getVal('emiLast');
+    for (let i = 1; i <= tenure; i++) emis.push(i < tenure ? eReg : eLast);
+  } else {
+    // Auto-calculate
+    if (interestType === 'reducing') {
+      const emi = calcEMI(loanAmt, nomRate, tenure);
+      emis = Array(tenure).fill(Math.round(emi * 100) / 100);
+    } else {
+      const emi = calcEMIFlat(loanAmt, nomRate, tenure);
+      emis = Array(tenure).fill(Math.round(emi * 100) / 100);
+    }
+  }
+
+  const totalPayable = emis.reduce((a,b) => a+b, 0);
+  const cfsNet = [-netDisbursed, ...emis];
+  const cfsGross = [-loanAmt, ...emis];
+  const irr1 = solveIRR(cfsNet, 0.025);
+  const apr1 = (Math.pow(1+irr1,12)-1)*100;
+  const irr2 = solveIRR(cfsGross, 0.025);
+  const apr2 = (Math.pow(1+irr2,12)-1)*100;
+  const apr3 = irr1*12*100;
+  const apr4 = irr2*12*100;
+  const nomMonthly = nomRate/12/100;
+  const apr5 = (Math.pow(1+nomMonthly,12)-1)*100;
+
+  // Hero
+  document.getElementById('hero-cards').innerHTML = `
+    <div class="hero-card accent-fixed">
+      <div class="hc-label">True APR / EAIR</div>
+      <div class="hc-val">${fmtPct2(apr1)}</div>
+      <div class="hc-sub">Net disbursed, compounded</div>
+    </div>
+    <div class="hero-card">
+      <div class="hc-label">Monthly IRR</div>
+      <div class="hc-val">${fmtPct(irr1*100)}</div>
+      <div class="hc-sub">Newton-Raphson</div>
+    </div>
+    <div class="hero-card">
+      <div class="hc-label">Total payable</div>
+      <div class="hc-val">${fmt(totalPayable)}</div>
+      <div class="hc-sub">Over ${tenure} months</div>
+    </div>
+    <div class="hero-card">
+      <div class="hc-label">Total interest cost</div>
+      <div class="hc-val">${fmt(totalPayable - loanAmt)}</div>
+      <div class="hc-sub">Payable – Loan amount</div>
+    </div>
+  `;
+
+  document.getElementById('rate-timeline-box').innerHTML = '';
+
+  // Rate bars
+  const maxRate = Math.max(apr1, apr2, clientAPR, nomRate)*1.1;
+  document.getElementById('rate-bars').innerHTML = [
+    { label: 'Nominal rate (stated)', val: nomRate, color: '#888' },
+    { label: 'Client stated APR', val: clientAPR, color: '#C4522A' },
+    { label: 'APR on gross loan', val: apr2, color: '#7A4F0D' },
+    { label: 'True APR on net disbursed', val: apr1, color: '#1D3A5F' },
+  ].map(b => `
+    <div class="rate-bar-row">
+      <div class="rb-top"><span class="rb-label">${b.label}</span><span class="rb-val" style="color:${b.color}">${fmtPct2(b.val)}</span></div>
+      <div class="rate-bar-track"><div class="rate-bar-fill" style="width:${(b.val/maxRate*100).toFixed(1)}%;background:${b.color}"></div></div>
+    </div>
+  `).join('');
+
+  // Verdict
+  const diff = Math.abs(apr1 - clientAPR);
+  document.getElementById('verdict-box').innerHTML = diff > 1
+    ? `<div class="verdict warn"><strong>Discrepancy detected:</strong> Client's stated APR of <strong>${fmtPct2(clientAPR)}</strong> differs from the true APR of <strong>${fmtPct2(apr1)}</strong> (gap: ${fmtPct2(diff)}). Most likely the APR is computed on gross loan ₹${loanAmt.toLocaleString('en-IN')} rather than net disbursed ₹${Math.round(netDisbursed).toLocaleString('en-IN')}, understating the true borrowing cost.</div>`
+    : `<div class="verdict ok"><strong>APR matches:</strong> Client's stated APR of ${fmtPct2(clientAPR)} is consistent with the calculated rate of ${fmtPct2(apr1)}.</div>`;
+
+  // Scenarios
+  const scenarios = [
+    { label: 'IRR on net disbursed → compounded (correct)', irr: irr1, apr: apr1 },
+    { label: 'IRR on gross loan → compounded', irr: irr2, apr: apr2 },
+    { label: 'IRR on net disbursed → simple (×12)', irr: irr1, apr: apr3 },
+    { label: 'IRR on gross loan → simple (×12)', irr: irr2, apr: apr4 },
+    { label: `Nominal ${nomRate}% compounded monthly`, irr: nomMonthly, apr: apr5 },
+  ];
+  document.getElementById('scenario-rows').innerHTML = scenarios.map((s,i) => {
+    const isMatch = Math.abs(s.apr - clientAPR) < 0.3;
+    const isCorrect = i === 0;
+    return `<div class="scenario-row ${isMatch?'highlighted':''}">
+      <span class="sc-label">${s.label}
+        ${isCorrect ? '<span class="badge badge-blue">correct</span>' : ''}
+        ${isMatch ? '<span class="badge badge-green">≈ client APR</span>' : ''}
+      </span>
+      <span class="sc-irr">${fmtPct(s.irr*100)}</span>
+      <span class="sc-apr ${s.apr>clientAPR+1?'high':isMatch?'match':''}">${fmtPct2(s.apr)}</span>
+    </div>`;
+  }).join('');
+
+  // Amortisation — always show rate for consistency
+  const tbody = document.getElementById('amort-tbody');
+  tbody.innerHTML = '';
+  let bal = netDisbursed;
+  const monthlyR = irr1;
+  for (let m = 1; m <= tenure; m++) {
+    const emi = emis[m-1];
+    const interest = bal * monthlyR;
+    const principal = emi - interest;
+    const closing = Math.max(0, bal - principal);
+    const tr = document.createElement('tr');
+    if (m === tenure) tr.classList.add('last-row');
+    tr.innerHTML = `<td>${m}</td><td><span class="rate-tag">${fmtPct2(nomRate)} p.a.</span></td><td>${fmt(bal)}</td><td>${fmt(emi)}</td><td>₹${interest.toFixed(2)}</td><td>₹${principal.toFixed(2)}</td><td>${fmt(closing)}</td>`;
+    tbody.appendChild(tr);
+    bal = closing;
+  }
+}
+
+// ─── FLOATING RATE CALCULATION ────────────────────────────────────
+function calcFloating() {
+  const loanAmt = getVal('loanAmt');
+  const tenure = Math.round(getVal('tenure'));
+  const netDisbursed = getVal('netDisbursed');
+  const clientAPR = getVal('clientAPR');
+
+  // Build month-by-month rate map
+  const monthRates = [];
+  let assigned = 0;
+  for (const p of periods) {
+    const cnt = Math.min(p.months, tenure - assigned);
+    if (cnt <= 0) break;
+    for (let i = 0; i < cnt; i++) monthRates.push({ rate: p.rate, emiType: p.emiType, period: periods.indexOf(p) });
+    assigned += cnt;
+  }
+  // Fill remaining with last period
+  const lastP = periods[periods.length-1];
+  while (monthRates.length < tenure) monthRates.push({ rate: lastP.rate, emiType: lastP.emiType, period: periods.length-1 });
+
+  // Build EMI schedule: recalculate EMI at each rate reset
+  const emiSchedule = [];
+  let bal = loanAmt;
+  let prevRate = null;
+  let tempEMI = 0;
+  for (let m = 0; m < tenure; m++) {
+    const { rate, emiType } = monthRates[m];
+    const remaining = tenure - m;
+    if (rate !== prevRate) {
+      // Recalculate EMI on current outstanding balance
+      tempEMI = emiType === 'flat'
+        ? calcEMIFlat(bal, rate, remaining)
+        : calcEMI(bal, rate, remaining);
+      prevRate = rate;
+    }
+    const monthlyR = rate / 12 / 100;
+    const interest = bal * monthlyR;
+    const principal = tempEMI - interest;
+    const closing = Math.max(0, bal - principal);
+    emiSchedule.push({ emi: Math.round(tempEMI*100)/100, interest, principal, opening: bal, closing, rate, period: monthRates[m].period });
+    bal = closing;
+  }
+
+  const emis = emiSchedule.map(r => r.emi);
+  const totalPayable = emis.reduce((a,b) => a+b, 0);
+
+  // IRR on actual cash flows
+  const cfsNet = [-netDisbursed, ...emis];
+  const cfsGross = [-loanAmt, ...emis];
+  const irr1 = solveIRR(cfsNet, 0.025);
+  const apr1 = (Math.pow(1+irr1,12)-1)*100;
+  const irr2 = solveIRR(cfsGross, 0.025);
+  const apr2 = (Math.pow(1+irr2,12)-1)*100;
+  const apr3 = irr1*12*100;
+  const apr4 = irr2*12*100;
+  const avgRate = periods.reduce((s,p) => s+p.rate*Math.min(p.months,tenure), 0) / tenure;
+  const nomMonthly = avgRate/12/100;
+  const apr5 = (Math.pow(1+nomMonthly,12)-1)*100;
+
+  // Hero
+  const uniqueRates = [...new Set(monthRates.map(r => r.rate))];
+  document.getElementById('hero-cards').innerHTML = `
+    <div class="hero-card accent-float">
+      <div class="hc-label">Blended APR / EAIR</div>
+      <div class="hc-val">${fmtPct2(apr1)}</div>
+      <div class="hc-sub">Net disbursed, compounded</div>
+    </div>
+    <div class="hero-card">
+      <div class="hc-label">Monthly IRR</div>
+      <div class="hc-val">${fmtPct(irr1*100)}</div>
+      <div class="hc-sub">Across all rate periods</div>
+    </div>
+    <div class="hero-card">
+      <div class="hc-label">Total payable</div>
+      <div class="hc-val">${fmt(totalPayable)}</div>
+      <div class="hc-sub">Over ${tenure} months</div>
+    </div>
+    <div class="hero-card">
+      <div class="hc-label">Rate periods</div>
+      <div class="hc-val">${uniqueRates.length}</div>
+      <div class="hc-sub">${uniqueRates.map(r=>fmtPct2(r)).join(', ')}</div>
+    </div>
+  `;
+
+  // Rate timeline
+  const totalMths = tenure;
+  const timelineSegs = periods.map((p, i) => {
+    const mths = Math.min(p.months, tenure);
+    const flex = (mths / totalMths * 100).toFixed(1);
+    return `<div class="timeline-seg" style="flex:${flex};background:${COLORS[i%COLORS.length]}" title="Period ${i+1}: ${fmtPct2(p.rate)} for ${mths}mo">${fmtPct2(p.rate)}</div>`;
+  }).join('');
+  document.getElementById('rate-timeline-box').innerHTML = `
+    <div class="rate-timeline">
+      <h3>Rate timeline across ${tenure} months</h3>
+      <div class="timeline-track">${timelineSegs}</div>
+      <div class="timeline-labels">
+        <span>Month 1</span>
+        ${periods.reduce((acc, p, i) => {
+          const soFar = periods.slice(0,i+1).reduce((s,x)=>s+x.months,0);
+          if (soFar < tenure && i < periods.length-1) acc += `<span>Month ${soFar+1}</span>`;
+          return acc;
+        }, '')}
+        <span>Month ${tenure}</span>
+      </div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;">
+        ${periods.map((p,i) => `<span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);">
+          <span style="width:10px;height:10px;border-radius:2px;background:${COLORS[i%COLORS.length]};display:inline-block;"></span>
+          Period ${i+1}: ${fmtPct2(p.rate)} p.a. (${Math.min(p.months,tenure)} mo, ${p.emiType})
+        </span>`).join('')}
+      </div>
+    </div>
+  `;
+
+  // Rate bars
+  const maxRate = Math.max(apr1, apr2, clientAPR, avgRate)*1.1;
+  document.getElementById('rate-bars').innerHTML = [
+    { label: 'Weighted avg nominal rate', val: avgRate, color: '#888' },
+    { label: 'Client stated APR', val: clientAPR, color: '#C4522A' },
+    { label: 'Blended APR on gross loan', val: apr2, color: '#7A4F0D' },
+    { label: 'True blended APR on net disbursed', val: apr1, color: '#5A3285' },
+  ].map(b => `
+    <div class="rate-bar-row">
+      <div class="rb-top"><span class="rb-label">${b.label}</span><span class="rb-val" style="color:${b.color}">${fmtPct2(b.val)}</span></div>
+      <div class="rate-bar-track"><div class="rate-bar-fill" style="width:${(b.val/maxRate*100).toFixed(1)}%;background:${b.color}"></div></div>
+    </div>
+  `).join('');
+
+  // Verdict
+  const diff = Math.abs(apr1 - clientAPR);
+  document.getElementById('verdict-box').innerHTML = diff > 1
+    ? `<div class="verdict warn"><strong>Discrepancy detected:</strong> Client's stated APR of <strong>${fmtPct2(clientAPR)}</strong> differs from the blended APR of <strong>${fmtPct2(apr1)}</strong> (gap: ${fmtPct2(diff)}). The floating rate loan has ${periods.length} rate period(s); the APR must reflect all cash flows on the net disbursed basis.</div>`
+    : `<div class="verdict ok"><strong>APR matches:</strong> Client's stated APR of ${fmtPct2(clientAPR)} is consistent with the blended calculated rate of ${fmtPct2(apr1)}.</div>`;
+
+  // Scenarios
+  const scenarios = [
+    { label: 'IRR on net disbursed → compounded (correct)', irr: irr1, apr: apr1 },
+    { label: 'IRR on gross loan → compounded', irr: irr2, apr: apr2 },
+    { label: 'IRR on net disbursed → simple (×12)', irr: irr1, apr: apr3 },
+    { label: 'IRR on gross loan → simple (×12)', irr: irr2, apr: apr4 },
+    { label: `Weighted avg ${fmtPct2(avgRate)} compounded monthly`, irr: nomMonthly, apr: apr5 },
+  ];
+  document.getElementById('scenario-rows').innerHTML = scenarios.map((s,i) => {
+    const isMatch = Math.abs(s.apr - clientAPR) < 0.3;
+    const isCorrect = i === 0;
+    return `<div class="scenario-row ${isMatch?'highlighted':''}">
+      <span class="sc-label">${s.label}
+        ${isCorrect ? '<span class="badge badge-purple">correct</span>' : ''}
+        ${isMatch ? '<span class="badge badge-green">≈ client APR</span>' : ''}
+      </span>
+      <span class="sc-irr">${fmtPct(s.irr*100)}</span>
+      <span class="sc-apr ${s.apr>clientAPR+1?'high':isMatch?'match':''}">${fmtPct2(s.apr)}</span>
+    </div>`;
+  }).join('');
+
+  // Amortisation — mark rate change rows
+  const tbody = document.getElementById('amort-tbody');
+  tbody.innerHTML = '';
+  let prevPeriod = -1;
+  for (let m = 0; m < tenure; m++) {
+    const row = emiSchedule[m];
+    const tr = document.createElement('tr');
+    if (m === tenure-1) tr.classList.add('last-row');
+    if (row.period !== prevPeriod && m > 0) tr.classList.add('period-change');
+    prevPeriod = row.period;
+    tr.innerHTML = `
+      <td>${m+1}</td>
+      <td><span class="rate-tag" style="background:${COLORS[row.period%COLORS.length]}20;color:${COLORS[row.period%COLORS.length]}">${fmtPct2(row.rate)} p.a.</span></td>
+      <td>${fmt(row.opening)}</td>
+      <td>${fmt(row.emi)}</td>
+      <td>₹${row.interest.toFixed(2)}</td>
+      <td>₹${row.principal.toFixed(2)}</td>
+      <td>${fmt(row.closing)}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+// ─── MAIN CALCULATE ───────────────────────────────────────────────
+function calculate() {
+  if (mode === 'fixed') calcFixed();
+  else calcFloating();
+  document.getElementById('results-placeholder').style.display = 'none';
+  document.getElementById('results-content').style.display = 'block';
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────
+window.onload = function() {
+  setEMIMode('split');
+  renderPeriods();
+  calculate();
+};
+</script>
+</body>
+</html>
